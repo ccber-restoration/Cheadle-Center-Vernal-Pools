@@ -1,12 +1,29 @@
-WQclean<-read.csv("VP_hydrology/VP_WQ_Clean.csv")
+library(tidyverse)
+
+
+#read in (nominally) clean water quality data
+WQclean<-read.csv("VP_WQ_Clean.csv") %>% 
+  #reformat date column
+  #note, gives warnings because does not specify timezone
+   mutate(Date = as.POSIXct(Date,format<-"%Y-%m-%d %H:%M:%S")) %>% 
+  #do some filtering out extreme values
+  filter(
+    Salinity_ppt < 100 &
+    WQclean$DO_mg_L<300 &
+    #keep only temps less than 100
+    Temp_C<100
+           ) %>% 
+  #remove NA values for Salinity
+  filter(!is.na(Salinity_ppt))
+  
+#explore
 str(WQclean)
 head(WQclean)
-WQclean$Date<-as.POSIXct(WQclean$Date,format<-"%Y-%m-%d %H:%M:%S")
-WQclean<-WQclean[WQclean$Salinity_ppt<100&WQclean$DO_mg_L<300&WQclean$Temp_C<100,]
-str(WQclean)
+  
+#check unique values of salinity
 unique(WQclean$Salinity_ppt)
-WQclean<-WQclean[!is.na(WQclean$Salinity_ppt),]
 
+# loop for each location, make a plot of salinity
 for (i in unique(WQclean$Location)){
   p<-WQclean[WQclean$Location==i,]
   q<- ggplot(p,aes(x=Date)) +
@@ -24,6 +41,7 @@ for (i in unique(WQclean$Location)){
 }
 
 
+#for each location, make a plot of DO
 for (i in unique(WQclean$Location)){
   p<-WQclean[WQclean$Location==i,]
   q<- ggplot(p,aes(x=Date)) +
@@ -41,7 +59,7 @@ for (i in unique(WQclean$Location)){
 }
 
 
-
+#for each location, make a figure of temperature
 for (i in unique(WQclean$Location)){
   p<-WQclean[WQclean$Location==i,]
   q<- ggplot(p,aes(x=Date)) +
