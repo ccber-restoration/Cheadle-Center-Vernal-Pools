@@ -1,18 +1,49 @@
-library(ggplot2)
-getwd()
-vp<-read.csv("~/VP_hydrology/CCBER_Vernal_Pool_Hydrology_0.csv")
-vp<-vp[,c(3,4,5,7,8)]
-vp<-subset(vp,vp$Location=="ncos")
-vp$Date<-as.POSIXct(vp$Date, format="%m/%d/%Y %H:%M")
-vp<-subset(vp,vp$Vernal.Pool.Name.or.ID!="West pond"&vp$Vernal.Pool.Name.or.ID!="West Pond" &
-vp$Vernal.Pool.Name.or.ID!="West pond ")
-colnames(vp)<-c("Date.Time","Location","Unlisted_location","VP_Name","Water_Level")
-vp$Date<-paste0(substr(vp$Date.Time,1,10))
-vp$Date<-as.Date(vp$Date,format="%Y-%m-%d")
-vpalllyears<-vp
-vp<-vp[vp$Date>="2020-10-01 20:00:00"&vp$Date<="2021-10-01 20:00:00",]
 
+#load packages
+library(ggplot2)
+
+#read in csv file (from root directory for now)
+vp<-read.csv("CCBER_Vernal_Pool_Hydrology_0.csv") %>% 
+  #subset columns
+  select(c("Date", "Location","Unlisted.Location","Vernal.Pool.Name.or.ID","Water.Level..in..")) %>% 
+  #filter to just NCOS vernal pools
+  filter(Location == "ncos") %>%
+  #reformat Date column
+  mutate(Date = as.POSIXct(Date, format="%m/%d/%Y %H:%M")) %>% 
+  #exclude West pond (3 spelling variants)
+  #FIXME- note that there is still one row with id == "Western pond"
+  filter(!(Vernal.Pool.Name.or.ID == "West pond" |
+           Vernal.Pool.Name.or.ID == "West Pond" |
+             Vernal.Pool.Name.or.ID == "West pond "
+             )) %>% 
+  #rename columns names (should do this further upstream?)
+  rename(Date.Time = Date,
+         Location = Location,
+         Unlisted_location = Unlisted.Location,
+         VP_Name = Vernal.Pool.Name.or.ID,
+         Water_Level = Water.Level..in..) %>% 
+  #extract date from date-time (first 10 characters?)
+  mutate(Date = paste0(substr(vp$Date.Time,1,10))) %>% 
+  #now convert from character to Date
+  mutate(Date = as.Date(vp$Date,format="%Y-%m-%d"))
+  
+  
+#create object with all years (before further modifying)
+vpalllyears<-vp
+
+#filter vernal pools to the 2020 water year (but change one "<=" to "<")
+#not sure why the times are at 10 PM?
+vp %>% 
+  #on or after the start of the 2020 water year and before the start of the 2021 water year
+  filter(Date >="2020-10-01 20:00:00" & Date <= "2021-10-01 00:00:00")
+
+#vp<-vp[vp$Date>="2020-10-01 20:00:00"&vp$Date<="2021-10-01 20:00:00",]
+
+
+#read in rainfall data (NOAA hourly precipitation?)
 Rain<-read.csv("NOAAhourly_precip_WY2021.csv")
+
+
 dailyrain<-aggregate(Precip_Calc_mm~Date,Rain,FUN=sum)
 dailyrain$Date<-as.Date(dailyrain$Date,format="%Y-%m-%d")
 vprain<-dailyrain[dailyrain$Date>="2021-01-27"& dailyrain$Date<="2021-04-09",]
